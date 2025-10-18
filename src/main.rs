@@ -2,6 +2,7 @@ use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 use std::path::{Path, PathBuf};
+use walkdir::WalkDir;
 
 #[derive(Debug, Default)]
 struct Config {
@@ -67,11 +68,27 @@ fn print_help() {
 }
 
 fn run(cfg: Config) -> io::Result<()> {
-    for p in &cfg.paths {
-        if p.is_dir() {
-            continue;
+    if cfg.recursive {
+        for p in &cfg.paths {
+            if p.is_file() {
+                // single file
+                search_one_file(&cfg, p)?;
+            } else {
+                for entry in WalkDir::new(p).into_iter().filter_map(Result::ok) {
+                    let e = entry;
+                    if e.file_type().is_file() {
+                        let path = e.path();
+                        search_one_file(&cfg, path)?;
+                    }
+                }
+            }
         }
-        search_one_file(&cfg, p)?;
+    } else {
+        for p in &cfg.paths {
+            if p.is_file() {
+                search_one_file(&cfg, p)?;
+            }
+        }
     }
     Ok(())
 }
