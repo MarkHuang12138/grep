@@ -86,16 +86,20 @@ fn search_one_file(cfg: &Config, path: &Path) -> io::Result<()> {
         None
     };
 
-    for (idx, line) in reader.lines().enumerate() {
-        let line = line?;
+    for (idx, line_res) in reader.lines().enumerate() {
+        let line = line_res?;
 
+        // determine whether this line matches
         let is_match = if let Some(ref pat) = pat_lc {
             line.to_lowercase().contains(pat)
         } else {
             line.contains(&cfg.pattern)
         };
 
-        if is_match {
+        // -v negates the result
+        let should_print = if cfg.invert { !is_match } else { is_match };
+
+        if should_print {
             if cfg.line_numbers {
                 println!("{}: {}", idx + 1, line);
             } else {
