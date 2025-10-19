@@ -1,3 +1,4 @@
+// final
 use colored::Colorize;
 use std::env;
 use std::fs::File;
@@ -18,17 +19,11 @@ struct Config {
     color: bool,            // -c
     help: bool,             // -h/--help
 }
+const HELP: &str = include_str!("../help.txt");
 
-const HELP: &str = "Usage: grep [OPTIONS] <pattern> <files...>\n\
-\n\
-Options:\n\
-  -i          Case-insensitive search\n\
-  -n          Print line numbers\n\
-  -v          Invert match (exclude lines that match the pattern)\n\
-  -r          Recursive directory search\n\
-  -f          Print filenames\n\
-  -c          Enable colored output\n\
-  -h, --help  Show help information\n";
+fn print_help() {
+    print!("{HELP}");
+}
 
 fn parse_args<I, S>(iter: I) -> Option<Config>
 where
@@ -64,33 +59,30 @@ where
     Some(cfg)
 }
 
-fn print_help() {
-    print!("{HELP}");
-}
-
 fn run(cfg: Config) -> io::Result<()> {
-    if cfg.recursive {
-        for p in &cfg.paths {
-            if p.is_file() {
-                // single file
-                search_one_file(&cfg, p)?;
-            } else {
-                for entry in WalkDir::new(p).into_iter().filter_map(Result::ok) {
-                    let e = entry;
-                    if e.file_type().is_file() {
-                        let path = e.path();
-                        search_one_file(&cfg, path)?;
-                    }
+    //collect all files to be searched
+    let mut files: Vec<PathBuf> = Vec::new();
+
+    for p in &cfg.paths {
+        if p.is_file() {
+            files.push(p.to_path_buf());
+        } else if cfg.recursive {
+            for entry in WalkDir::new(p).into_iter().filter_map(Result::ok) {
+                if entry.file_type().is_file() {
+                    files.push(entry.path().to_path_buf());
                 }
             }
-        }
-    } else {
-        for p in &cfg.paths {
-            if p.is_file() {
-                search_one_file(&cfg, p)?;
-            }
+        } else {
         }
     }
+
+    files.sort_by(|a, b| a.to_string_lossy().cmp(&b.to_string_lossy()));
+
+    //search each file individually
+    for f in files {
+        search_one_file(&cfg, &f)?;
+    }
+
     Ok(())
 }
 
