@@ -1,10 +1,11 @@
 // final
 use colored::Colorize;
+use std::cmp::Ordering;
 use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
+use walkdir::WalkDir; //for custom sort in WalkDir (dirs first)
 
 #[derive(Debug, Default)]
 struct Config {
@@ -22,7 +23,7 @@ struct Config {
 const HELP: &str = include_str!("../help.txt");
 
 fn print_help() {
-    print!("{HELP}");
+    print!("{HELP}\n"); //add newline at end
 }
 
 fn parse_args<I, S>(iter: I) -> Option<Config>
@@ -59,26 +60,67 @@ where
     Some(cfg)
 }
 
+// fn run(cfg: Config) -> io::Result<()> {
+//     //collect all files to be searched
+//     let mut files: Vec<PathBuf> = Vec::new();
+
+//     for p in &cfg.paths {
+//         if p.is_file() {
+//             files.push(p.to_path_buf());
+//         } else if cfg.recursive {
+//             for entry in WalkDir::new(p).into_iter().filter_map(Result::ok) {
+//                 if entry.file_type().is_file() {
+//                     files.push(entry.path().to_path_buf());
+//                 }
+//             }
+//         } else {
+//         }
+//     }
+
+//     files.sort_by(|a, b| a.to_string_lossy().cmp(&b.to_string_lossy()));
+
+//     //search each file individually
+//     for f in files {
+//         search_one_file(&cfg, &f)?;
+//     }
+
+//     Ok(())
+// }
+
 fn run(cfg: Config) -> io::Result<()> {
-    //collect all files to be searched
+    // collect all files to be searched
     let mut files: Vec<PathBuf> = Vec::new();
 
     for p in &cfg.paths {
         if p.is_file() {
             files.push(p.to_path_buf());
         } else if cfg.recursive {
-            for entry in WalkDir::new(p).into_iter().filter_map(Result::ok) {
+            // make WalkDir visit directories before files under the same parent
+            for entry in WalkDir::new(p)
+                .sort_by(|a, b| {
+                    let ad = a.file_type().is_dir();
+                    let bd = b.file_type().is_dir();
+                    match (ad, bd) {
+                        (true, false) => Ordering::Less,    // dirs first
+                        (false, true) => Ordering::Greater, // files after
+                        _ => a.file_name().cmp(&b.file_name()),
+                    }
+                })
+                .into_iter()
+                .filter_map(Result::ok)
+            {
                 if entry.file_type().is_file() {
                     files.push(entry.path().to_path_buf());
                 }
             }
         } else {
+            // no -r: ignore directories
         }
     }
 
-    files.sort_by(|a, b| a.to_string_lossy().cmp(&b.to_string_lossy()));
+    // do not reorder the collected files; keep discovery order.
 
-    //search each file individually
+    // search each file individually
     for f in files {
         search_one_file(&cfg, &f)?;
     }

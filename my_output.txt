@@ -10,7 +10,8 @@ Options:
 -r                Recursive directory search
 -f                Print filenames
 -c                Enable colored output
--h, --help        Show help information================================================
+-h, --help        Show help information
+================================================
 Test case 2: Basic Search...
 ------------------------------------------------
 ﻿## Search Utility
@@ -47,11 +48,11 @@ Test case 8: Recursive search (search in subdirectories)...
 ================================================
 Test case 9: Print filenames along with matching lines...
 ------------------------------------------------
-tests/grep.md: ﻿## Search Utility
 tests/recursive/grep.md: ﻿## Search Utility
+tests/grep.md: ﻿## Search Utility
 ================================================
 Test case 10: Produce colored output...
 ------------------------------------------------
-tests/grep.md: ﻿## Search Utility
 tests/recursive/grep.md: ﻿## Search Utility
+tests/grep.md: ﻿## Search Utility
 ================================================
